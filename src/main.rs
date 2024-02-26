@@ -3,8 +3,10 @@ use std::{
     collections::HashMap,
     env,
     fs::File,
-    io::{Read, Write},
+    io::{Read, Write}, thread,
 };
+
+const MAX_LENGTH: u32 = 9;
 
 fn main() {
     // Collects Arguments Passed Into Program
@@ -27,54 +29,71 @@ fn main() {
         .map(|mat| &genomic_data[mat.start()..mat.end()])
         .collect();
 
+    let mut progress: u32 = 0;
+
     //let mut chromosome_list: Vec<&str> = Vec::new();
     //chromosome_list.push("sampleGenome");
 
     //let mut chromosome_rna: Vec<&str> = Vec::new();
     //chromosome_rna.push("atcaatgatcaacgtaagcttctaagcatgatcaaggtgctcacacagtttatccacaacctgagtggatgacatcaagataggtcgttgtatctccttcctctcgtactctcatgaccacggaaagatgatcaagagaggatgatttcttggccatatcgcaatgaatacttgtgacttgtgcttccaattgacatcttcagcgccatattgcgctggccaaggtgacggagcgggattacgaaagcatgatcatggctgttgttctgtttatcttgttttgactgagacttgttaggatagacggtttttcatcactgactagccaaagccttactctgcctgacatcgaccgtaaattgataatgaatttacatgcttccgcgacgatttacctcttgatcatcgatccgattgaagatcttcaattgttaattctcttgcctcgactcatagccatgatgagctcttgatcatgtttccttaaccctctattttttacggaagaatgatcaagctgctgctcttgatcatcgtttc");
 
-    const MAX_LENGTH: u32 = 9;
-
     // Look For Matches in Chromosome
     // Uses a Sliding Window that Searches for Matches of One Size, Then Goes Back and Increases
     // the Size by 1 Until the MAX_LENGTH Consntant Is Reached
-    // TODO: ABSTRACT INTO OWN FUNCTION (POSSIBLY RECURSIVE?)
-    for chromosome in 0..chromosome_list.len() {
-        let mut map: HashMap<String, i32> = HashMap::new();
-        let genome = &chromosome_rna[chromosome].to_lowercase();
+    thread::scope(|scope| {
+        for chromosome in 0..chromosome_list.len() {
+            // Create Copies of 'chromosome_rna' and 'chromosome_list' to be Used in Closure
+            let chromosome_rna_clone = chromosome_rna.clone(); // Clone chromosome_rna
+            let list_copy_clone = chromosome_list.clone(); // Clone chromosome_list
+            scope.spawn(move || {
+                let rna_copy = chromosome_rna_clone; // Use the cloned value inside the closure
+                let list_copy = list_copy_clone; // Use the cloned value inside the closure
+    
+                //println!("New Thread Spawned");
+                let genome = &rna_copy[chromosome].to_lowercase();
+    
+                let map = analyze_sequence(genome.to_string());
+    
+                let decoded_file = File::create(
+                    list_copy[chromosome]
+                        .to_owned()
+                        .replace('>', "")
+                        .to_string()
+                        + ".txt",
+                );
+                decoded_file
+                    .unwrap()
+                    .write(serde_json::to_string(&map).unwrap().as_bytes());
+            });
 
-        println!("{}/{}", chromosome + 1, chromosome_list.len());
+            progress += 1;
+            println!("{}/{}", progress, chromosome_list.len());
+        }
+    });
+    
+}
 
-        for i in 2..MAX_LENGTH {
-            let mut left: usize = 0;
-            let mut right: usize = i.try_into().unwrap();
+fn analyze_sequence(sequence: String) -> HashMap<String, u32> {
+    let mut map: HashMap<String, u32> = HashMap::new();
 
-            for _j in 0..genome.len() {
-                let mut _genome = &genome[left..right];
-                println!("{}", _genome);
-                let _genome = _genome.replace('\n', "");
-                map.entry(_genome).and_modify(|val| *val += 1).or_insert(1);
+    for i in 2..MAX_LENGTH {
+        let mut left: usize = 0;
+        let mut right: usize = i.try_into().unwrap();
 
-                if left < genome.len() && right < genome.len() {
-                    left += 1;
-                    right += 1;
-                }
+        for _j in 0..sequence.len() {
+            let mut _genome = &sequence[left..right];
+            //println!("{}", _genome);
+            let _genome = _genome.replace('\n', "");
+            map.entry(_genome).and_modify(|val| *val += 1).or_insert(1);
+
+            if left < sequence.len() && right < sequence.len() {
+                left += 1;
+                right += 1;
             }
         }
-
-        map.retain(|_, v| *v > 1);
-
-        // Create File and Write Matches to Output
-        // TODO: ABSTRACT INTO OWN FUNCTION
-        let decoded_file = File::create(
-            chromosome_list[chromosome]
-                .to_owned()
-                .replace('>', "")
-                .to_string()
-                + ".txt",
-        );
-        decoded_file
-            .unwrap()
-            .write(serde_json::to_string(&map).unwrap().as_bytes());
     }
+
+    map.retain(|_, v| *v > 1);
+
+    return map;
 }
