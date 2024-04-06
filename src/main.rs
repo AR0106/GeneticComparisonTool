@@ -1,9 +1,12 @@
+mod gcto_file;
+
 use regex::Regex;
 use std::{
     collections::HashMap,
     env,
     fs::File,
-    io::{Read, Write}, thread,
+    io::{Read, Write},
+    thread,
 };
 
 const MAX_LENGTH: u32 = 9;
@@ -48,31 +51,36 @@ fn main() {
             scope.spawn(move || {
                 let rna_copy = chromosome_rna_clone; // Use the cloned value inside the closure
                 let list_copy = list_copy_clone; // Use the cloned value inside the closure
-    
+
                 //println!("New Thread Spawned");
                 let genome = &rna_copy[chromosome].to_lowercase();
-    
+
                 let map = analyze_sequence(genome.to_string());
-    
+
+                gcto_file::generate_gcto(map.clone(), list_copy[chromosome].to_string());
+
                 let decoded_file = File::create(
                     list_copy[chromosome]
                         .to_owned()
                         .replace('>', "")
                         .to_string()
-                        + ".txt",
+                        + ".json",
                 );
                 decoded_file
                     .unwrap()
                     .write(serde_json::to_string(&map).unwrap().as_bytes());
             });
 
+            // TODO: FIX PROGESS BAR
             progress += 1;
             println!("{}/{}", progress, chromosome_list.len());
         }
     });
-    
 }
 
+// Iterate Through Each Sequence MAX_LENGTH Times and put it in a HashMap
+// @param sequence: String
+// @return HashMap<String, u32>
 fn analyze_sequence(sequence: String) -> HashMap<String, u32> {
     let mut map: HashMap<String, u32> = HashMap::new();
 
