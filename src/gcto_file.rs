@@ -9,18 +9,23 @@ use std::io::Write;
 // c, g = 01
 // space = 10
 static PARSER_DICTIONARY: phf::Map<char, u8> = phf_map! {
-    'a' => 0o00,
-    'A' => 0o00,
-    't' => 0o01,
-    'T' => 0o01,
-    'c' => 0o02,
-    'C' => 0o02,
-    'g' => 0o03,
-    'G' => 0o03,
-    ':' => 0o04,
-    ' ' => 0o05
+    'a' => 0o0, // 'A' Nucleotide
+    'A' => 0o0, // 'A' Nucleotide
+    't' => 0o1, // 'T' Nucleotide
+    'T' => 0o1, // 'T' Nucleotide
+    'c' => 0o2, // 'C' Nucleotide
+    'C' => 0o2, // 'C' Nucleotide
+    'g' => 0o3, // 'G' Nucleotide
+    'G' => 0o3, // 'G' Nucleotide
+    ':' => 0o4, // Mark End of Nucleotide Sequence
+    ' ' => 0o5, // Mark End of Data Entry
+    'n' => 0o6, // Unknown Nucleic Acid Residue
+    'N' => 0o6, // Unknown Nucleic Acid Residue
+    'x' => 0o7, // Unknown Amino Acid Residue
+    'X' => 0o7  // Unknown Amino Acid Residue
 };
 
+// Reverse Lookup Table for PARSER_DICTIONARY
 lazy_static::lazy_static! {
     static ref REV_PARSER_DICTIONARY: HashMap<u8, char> = {
         let mut rev_map = HashMap::new();
@@ -44,12 +49,40 @@ fn u32_to_u8(data: u32) -> Vec<u8> {
     reducedBytes
 }
 
-pub fn generate_gcto(data: HashMap<String, u32>, outfile_name: String) {
+fn u8_to_u32(data: Vec<u8>) -> u32 {
+    let mut padded_data: Vec<u8> = Vec::new();
+
+    for _ in 0..(4 - data.len()) {
+        padded_data.push(0);
+    }
+    padded_data.append(&mut data.clone());
+
+    let bytes = u32::from_be_bytes(padded_data.try_into().unwrap());
+
+    bytes
+}
+
+pub fn generate_gcto(data: HashMap<String, u32>, outfile_name: String, override_mapping: Option<bool>) {
     let mut output_table: Vec<(Vec<u8>, u32)> = Vec::new();
 
     for (key, value) in data {
-        let sequence: Vec<u8> = key.chars().map(|n| PARSER_DICTIONARY[&n]).collect();
-        output_table.push((sequence, value));
+        if override_mapping.unwrap_or(false) {
+            let mut sequence: Vec<u8> = Vec::new();
+
+            for char in key.chars() {
+                if !PARSER_DICTIONARY.contains_key(&char) {
+                    panic!("PARSER HAS NO DEFINITION FOR {}", char)
+                }
+
+                sequence.push(PARSER_DICTIONARY[&char]);
+            }
+
+            output_table.push((sequence, value));
+        }
+        else {
+            let sequence: Vec<u8> = key.chars().map(|n| PARSER_DICTIONARY[&n]).collect();
+            output_table.push((sequence, value));
+        }
     }
 
     let mut outVec: Vec<u8> = Vec::new();
@@ -65,9 +98,56 @@ pub fn generate_gcto(data: HashMap<String, u32>, outfile_name: String) {
     out_file.unwrap().write(&outVec);
 }
 
-/*
-pub fn load_gcto(filePath: String) -> Vec<(String, u32)> {
+pub fn load_gcto(filePath: &String) -> Vec<(String, u32)> {
     let mut output_table: Vec<(String, u32)> = Vec::new();
 
-    let raw_data = fs::read(filePath);
-}*/
+    let mut raw_data = fs::read(filePath).ok().unwrap();
+    raw_data.push(0o0);
+
+    let mut sequence_builder: String = "".to_string();
+    let mut is_building_sequence: bool = true;
+
+    let mut count_builder: Vec<u8> = Vec::new();
+
+    // Write a general for loop to read the GCTO file
+
+    for n in 0..raw_data.len() - 1 {
+        //if !REV_PARSER_DICTIONARY.contains_key(&raw_data[n]) {
+        //    println!("PARSER HAS NO DEFINITION FOR {}", raw_data[n]);
+        //}
+        //if !REV_PARSER_DICTIONARY.contains_key(&raw_data[n+1]) {
+        //    println!("PARSER HAS NO DEFINITION FOR NEXT BYTE {}", raw_data[n+1]);
+        //}
+
+        //print!("{} ", raw_data[n]);
+        if REV_PARSER_DICTIONARY.contains_key(&raw_data[n]){
+            if REV_PARSER_DICTIONARY[&raw_data[n]] == ':' {
+                is_building_sequence = false;
+                continue;
+            } else if REV_PARSER_DICTIONARY[&raw_data[n]] == ' ' 
+                && n < raw_data.len() 
+                && REV_PARSER_DICTIONARY.get(&raw_data[n+1]).unwrap_or_else(||  {&' '}) != &' ' 
+                {
+                output_table.push((sequence_builder, u8_to_u32(count_builder)));
+            
+                sequence_builder = "".to_string();
+                count_builder = Vec::new();
+                is_building_sequence = true;
+            
+                continue;
+            }
+        }
+
+        if is_building_sequence {
+            sequence_builder.push(REV_PARSER_DICTIONARY[&raw_data[n]]);
+        } else {
+            count_builder.push(raw_data[n]);
+        }
+    }
+
+    if output_table.len() < 1 {
+        panic!("Output Table is Empty, GCTO Unable to be Loaded");
+    }
+
+    output_table
+}

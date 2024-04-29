@@ -17,11 +17,25 @@ fn main() {
 
     // Open FNA File
     // Index 1 Contains First Past Argument (Should Be FNA File Path)
-    let fna = File::open(&args[1]);
+    
+    if args[1] == "generate" {
+        load_fasta_into_gcto(&args);
+    }
+    else if args[1] == "load" {
+        let table = gcto_file::load_gcto(&args[2]);
+
+        for entry in table {
+            println!("{:?}", entry);
+        }
+    }
+}
+
+fn load_fasta_into_gcto(args: &Vec<String>) {
+    let fasta = File::open(&args[2]);
     let mut genomic_data = String::new();
 
     // Read File into genomic_data String
-    fna.unwrap().read_to_string(&mut genomic_data);
+    fasta.unwrap().read_to_string(&mut genomic_data);
 
     // Parse FNA File into Headers and Their Respective Data
     // This Creates 2 Lists with Matching Indices
@@ -33,6 +47,8 @@ fn main() {
         .collect();
 
     let mut progress: u32 = 0;
+
+    let include_json_output: bool = args.contains(&"--json".to_string());
 
     //let mut chromosome_list: Vec<&str> = Vec::new();
     //chromosome_list.push("sampleGenome");
@@ -52,23 +68,25 @@ fn main() {
                 let rna_copy = chromosome_rna_clone; // Use the cloned value inside the closure
                 let list_copy = list_copy_clone; // Use the cloned value inside the closure
 
-                //println!("New Thread Spawned");
                 let genome = &rna_copy[chromosome].to_lowercase();
 
                 let map = analyze_sequence(genome.to_string());
 
-                gcto_file::generate_gcto(map.clone(), list_copy[chromosome].to_string());
+                gcto_file::generate_gcto(map.clone(), list_copy[chromosome].to_string(), None);
 
-                let decoded_file = File::create(
-                    list_copy[chromosome]
-                        .to_owned()
-                        .replace('>', "")
-                        .to_string()
-                        + ".json",
-                );
-                decoded_file
-                    .unwrap()
-                    .write(serde_json::to_string(&map).unwrap().as_bytes());
+                // Allow the User to Generate ".json" Versions of the ".gcto" files
+                if include_json_output {
+                    let decoded_file = File::create(
+                        list_copy[chromosome]
+                            .to_owned()
+                            .replace('>', "")
+                            .to_string()
+                            + ".json",
+                    );
+                    decoded_file
+                        .unwrap()
+                        .write(serde_json::to_string(&map).unwrap().as_bytes());
+                }
             });
 
             // TODO: FIX PROGESS BAR
