@@ -2,13 +2,13 @@ use lazy_static;
 use phf::{phf_map, PhfHash};
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::Write;
+use std::io::{Read, Write};
 
 // Binary Dictionary for Parsing GCTO File
 // a, t = 00
 // c, g = 01
 // space = 10
-static PARSER_DICTIONARY: phf::Map<char, u8> = phf_map! {
+pub static PARSER_DICTIONARY: phf::Map<char, u8> = phf_map! {
     'a' => 0o0, // 'A' Nucleotide
     'A' => 0o0, // 'A' Nucleotide
     't' => 0o1, // 'T' Nucleotide
@@ -57,12 +57,31 @@ fn u8_to_u32(data: Vec<u8>) -> u32 {
     }
     padded_data.append(&mut data.clone());
 
-    let bytes = u32::from_be_bytes(padded_data.try_into().unwrap());
-
-    bytes
+    u32::from_be_bytes(padded_data.try_into().unwrap())
 }
 
-pub fn generate_gcto(data: HashMap<String, u32>, outfile_name: String, override_mapping: Option<bool>) {
+pub fn generate_gcto(infile_path: String, outfile_name: String) {
+    let mut output: Vec<u8> = Vec::new();
+    let mut sequence: String = String::new();
+
+    let mut file = File::open(infile_path).unwrap();
+    file.read_to_string(&mut sequence).unwrap();
+
+    for char in sequence.chars() {
+        if !PARSER_DICTIONARY.contains_key(&char) {
+            panic!("PARSER HAS NO DEFINITION FOR {}", char)
+        }
+        output.push(PARSER_DICTIONARY[&char]);
+    }
+
+    File::create(outfile_name + ".gcto").unwrap().write(&output);
+}
+
+pub fn generate_gcto_frequency_map(
+    data: HashMap<String, u32>,
+    outfile_name: String,
+    override_mapping: Option<bool>,
+) {
     let mut output_table: Vec<(Vec<u8>, u32)> = Vec::new();
 
     for (key, value) in data {
@@ -78,8 +97,7 @@ pub fn generate_gcto(data: HashMap<String, u32>, outfile_name: String, override_
             }
 
             output_table.push((sequence, value));
-        }
-        else {
+        } else {
             let sequence: Vec<u8> = key.chars().map(|n| PARSER_DICTIONARY[&n]).collect();
             output_table.push((sequence, value));
         }
@@ -98,7 +116,7 @@ pub fn generate_gcto(data: HashMap<String, u32>, outfile_name: String, override_
     out_file.unwrap().write(&outVec);
 }
 
-pub fn load_gcto(filePath: &String) -> Vec<(String, u32)> {
+pub fn load_gcto_table(filePath: &String) -> Vec<(String, u32)> {
     let mut output_table: Vec<(String, u32)> = Vec::new();
 
     let mut raw_data = fs::read(filePath).ok().unwrap();
@@ -120,20 +138,20 @@ pub fn load_gcto(filePath: &String) -> Vec<(String, u32)> {
         //}
 
         //print!("{} ", raw_data[n]);
-        if REV_PARSER_DICTIONARY.contains_key(&raw_data[n]){
+        if REV_PARSER_DICTIONARY.contains_key(&raw_data[n]) {
             if REV_PARSER_DICTIONARY[&raw_data[n]] == ':' {
                 is_building_sequence = false;
                 continue;
-            } else if REV_PARSER_DICTIONARY[&raw_data[n]] == ' ' 
-                && n < raw_data.len() 
-                && REV_PARSER_DICTIONARY.get(&raw_data[n+1]).unwrap_or_else(||  {&' '}) != &' ' 
-                {
+            } else if REV_PARSER_DICTIONARY[&raw_data[n]] == ' '
+                && n < raw_data.len()
+                && REV_PARSER_DICTIONARY.get(&raw_data[n + 1]).unwrap_or(&' ') != &' '
+            {
                 output_table.push((sequence_builder, u8_to_u32(count_builder)));
-            
+
                 sequence_builder = "".to_string();
                 count_builder = Vec::new();
                 is_building_sequence = true;
-            
+
                 continue;
             }
         }
@@ -145,7 +163,7 @@ pub fn load_gcto(filePath: &String) -> Vec<(String, u32)> {
         }
     }
 
-    if output_table.len() < 1 {
+    if output_table.is_empty() {
         panic!("Output Table is Empty, GCTO Unable to be Loaded");
     }
 

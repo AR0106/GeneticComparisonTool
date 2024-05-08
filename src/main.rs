@@ -1,5 +1,10 @@
+mod analyzers {
+    pub mod targeting;
+}
 mod gcto_file;
 
+use analyzers::targeting;
+use gcto_file::generate_gcto;
 use regex::Regex;
 use std::{
     collections::HashMap,
@@ -17,15 +22,29 @@ fn main() {
 
     // Open FNA File
     // Index 1 Contains First Past Argument (Should Be FNA File Path)
-    
-    if args[1] == "generate" {
+
+    if args[1] == "generate_frequency" {
         load_fasta_into_gcto(&args);
-    }
-    else if args[1] == "load" {
-        let table = gcto_file::load_gcto(&args[2]);
+    } else if args[1] == "load_frequency" {
+        let table = gcto_file::load_gcto_table(&args[2]);
 
         for entry in table {
             println!("{:?}", entry);
+        }
+    } else if args[1] == "convert" {
+        generate_gcto(args[2].to_string(), args[3].to_string());
+    } else if args[1] == "find_pam" {
+        let mut genome: Vec<u8> = Vec::new();
+
+        File::open(&args[2])
+            .unwrap()
+            .read_to_end(&mut genome)
+            .unwrap();
+
+        let pam_sites: Vec<u64> = targeting::find_pam_sites(genome);
+
+        for site in pam_sites {
+            println!("PAM Site Found at Index {}", site);
         }
     }
 }
@@ -72,7 +91,11 @@ fn load_fasta_into_gcto(args: &Vec<String>) {
 
                 let map = analyze_sequence(genome.to_string());
 
-                gcto_file::generate_gcto(map.clone(), list_copy[chromosome].to_string(), None);
+                gcto_file::generate_gcto_frequency_map(
+                    map.clone(),
+                    list_copy[chromosome].to_string(),
+                    None,
+                );
 
                 // Allow the User to Generate ".json" Versions of the ".gcto" files
                 if include_json_output {
