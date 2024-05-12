@@ -46,6 +46,16 @@ fn main() {
         for site in pam_sites {
             println!("PAM Site Found at Index {}", site);
         }
+    } else if args[1] == "find_chi" {
+        let mut genome: Vec<u8> = Vec::new();
+        File::open(&args[2])
+            .unwrap()
+            .read_to_end(&mut genome)
+            .unwrap();
+        let chi_sites: Vec<u64> = targeting::find_chi_sites(genome);
+        for site in chi_sites {
+            println!("Chi Site Found at Index {}", site);
+        }
     }
 }
 

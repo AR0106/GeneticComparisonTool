@@ -13,3 +13,17 @@ pub fn find_pam_sites(genome: Vec<u8>) -> Vec<u64> {
     pam_sites
 }
 
+pub fn find_chi_sites(genome: Vec<u8>) -> Vec<u64> {
+    let mut chi_sites: Vec<u64> = Vec::new();
+
+    let chi_id: [u8; 8] = [0o3, 0o2, 0o1, 0o3, 0o3, 0o1, 0o3, 0o3];
+
+    for i in 0..genome.len() - 8 {
+        if genome[i..i + 8] == chi_id {
+            println!("Chi Site Found at Index {}", i);
+            chi_sites.push(i as u64);
+        }
+    }
+
+    chi_sites
+}

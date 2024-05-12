@@ -25,11 +25,34 @@ pub static PARSER_DICTIONARY: phf::Map<char, u8> = phf_map! {
     'X' => 0o7  // Unknown Amino Acid Residue
 };
 
+// Dictionary for Complementary Nucleotide Base Pairing
+pub static INVERSION_DICTIONARY: phf::Map<char, u8> = phf_map! {
+    'a' => 0o1, // 'A' Nucleotide Base Pair 'T'
+    'A' => 0o1, // 'A' Nucleotide Base Pair 'T'
+    't' => 0o0, // 'T' Nucleotide Base Pair 'A'
+    'T' => 0o0, // 'T' Nucleotide Base Pair 'A'
+    'c' => 0o3, // 'C' Nucleotide Base Pair 'G'
+    'C' => 0o3, // 'C' Nucleotide Base Pair 'G'
+    'g' => 0o2, // 'G' Nucleotide Base Pair 'C'
+    'G' => 0o2  // 'G' Nucleotide Base Pair 'C'
+};
+
 // Reverse Lookup Table for PARSER_DICTIONARY
 lazy_static::lazy_static! {
     static ref REV_PARSER_DICTIONARY: HashMap<u8, char> = {
         let mut rev_map = HashMap::new();
         for (k, v) in PARSER_DICTIONARY.into_iter() {
+            rev_map.insert(*v, *k);
+        }
+        rev_map
+    };
+}
+
+// Reverse Lookup Table for INVERSION_DICTIONARY
+lazy_static::lazy_static! {
+    static ref REV_INVERSION_DICTIONARY: HashMap<u8, char> = {
+        let mut rev_map = HashMap::new();
+        for (k, v) in INVERSION_DICTIONARY.into_iter() {
             rev_map.insert(*v, *k);
         }
         rev_map
