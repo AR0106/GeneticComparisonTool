@@ -56,6 +56,29 @@ fn main() {
         for site in chi_sites {
             println!("Chi Site Found at Index {}", site);
         }
+    } else if args[1] == "create_genome" {
+        let genome_name = &args[2];
+        let genome = &args[3];
+
+        gcto_file::manual_create_gcto(genome.to_string(), genome_name.to_string());
+    } else if args[1] == "generate_single_frequency" {
+        let genome = &args[2];
+        let map = analyze_sequence_as_string(genome.to_string());
+
+        for (key, value) in &map {
+            println!("{}: {}", key, value);
+        }
+
+        let include_json_output: bool = args.contains(&"--json".to_string());
+
+        if include_json_output {
+            let decoded_file = File::create("single-frequency.json");
+            decoded_file
+                .unwrap()
+                .write(serde_json::to_string(&map).unwrap().as_bytes());
+        }
+    } else {
+        println!("Invalid Command");
     }
 }
 
@@ -99,7 +122,7 @@ fn load_fasta_into_gcto(args: &Vec<String>) {
 
                 let genome = &rna_copy[chromosome].to_lowercase();
 
-                let map = analyze_sequence(genome.to_string());
+                let map = analyze_sequence_as_string(genome.to_string());
 
                 gcto_file::generate_gcto_frequency_map(
                     map.clone(),
@@ -132,7 +155,7 @@ fn load_fasta_into_gcto(args: &Vec<String>) {
 // Iterate Through Each Sequence MAX_LENGTH Times and put it in a HashMap
 // @param sequence: String
 // @return HashMap<String, u32>
-fn analyze_sequence(sequence: String) -> HashMap<String, u32> {
+fn analyze_sequence_as_string(sequence: String) -> HashMap<String, u32> {
     let mut map: HashMap<String, u32> = HashMap::new();
 
     for i in 2..MAX_LENGTH {
@@ -144,6 +167,29 @@ fn analyze_sequence(sequence: String) -> HashMap<String, u32> {
             //println!("{}", _genome);
             let _genome = _genome.replace('\n', "");
             map.entry(_genome).and_modify(|val| *val += 1).or_insert(1);
+
+            if left < sequence.len() && right < sequence.len() {
+                left += 1;
+                right += 1;
+            }
+        }
+    }
+
+    map.retain(|_, v| *v > 1);
+
+    return map;
+}
+
+fn analyze_sequence(sequence: Vec<u8>) -> HashMap<Vec<u8>, u32> {
+    let mut map: HashMap<Vec<u8>, u32> = HashMap::new();
+
+    for i in 2..MAX_LENGTH {
+        let mut left: usize = 0;
+        let mut right: usize = i.try_into().unwrap();
+
+        for _ in 00..sequence.len() {
+            let mut genome = &sequence[left..right];
+            map.entry(genome.to_vec()).and_modify(|val| *val += 1).or_insert(1);
 
             if left < sequence.len() && right < sequence.len() {
                 left += 1;

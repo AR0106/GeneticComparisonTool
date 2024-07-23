@@ -100,6 +100,19 @@ pub fn generate_gcto(infile_path: String, outfile_name: String) {
     File::create(outfile_name + ".gcto").unwrap().write(&output);
 }
 
+pub fn manual_create_gcto(data: String, outfile_name: String) {
+    let mut output: Vec<u8> = Vec::new();
+
+    for char in data.chars() {
+        if !PARSER_DICTIONARY.contains_key(&char) {
+            panic!("PARSER HAS NO DEFINITION FOR {}", char)
+        }
+        output.push(PARSER_DICTIONARY[&char]);
+    }
+
+    File::create(outfile_name + ".gcto").unwrap().write(&output);
+}
+
 pub fn generate_gcto_frequency_map(
     data: HashMap<String, u32>,
     outfile_name: String,
@@ -191,4 +204,30 @@ pub fn load_gcto_table(filePath: &String) -> Vec<(String, u32)> {
     }
 
     output_table
+}
+
+pub fn string_to_gcto(sequence: String) -> Vec<u8> {
+    let mut output: Vec<u8> = Vec::new();
+
+    for char in sequence.chars() {
+        if !PARSER_DICTIONARY.contains_key(&char) {
+            panic!("PARSER HAS NO DEFINITION FOR {}", char)
+        }
+        output.push(PARSER_DICTIONARY[&char]);
+    }
+
+    return output
+}
+
+pub fn gcto_to_string(sequence: Vec<u8>) -> String {
+    let mut output: String = String::new();
+
+    for byte in sequence {
+        if !REV_PARSER_DICTIONARY.contains_key(&byte) {
+            panic!("PARSER HAS NO DEFINITION FOR {}", byte)
+        }
+        output.push(REV_PARSER_DICTIONARY[&byte]);
+    }
+
+    return output
 }
