@@ -2,3 +2,6 @@
 /.vscode
 /.vs
 /Organisms
+src/.vs
+*.gcto
+*.json
