@@ -6,8 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+charts = "0.3.0"
 indexmap = "2.1.0"
 lazy_static = "1.4.0"
 phf = { version = "0.11.2", features = ["macros"] }
 regex = "1.10.2"
+rustplotlib = "0.0.4"
 serde_json = "1.0.112"
