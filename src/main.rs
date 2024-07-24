@@ -2,19 +2,22 @@ mod analyzers {
     pub mod targeting;
 }
 mod gcto_file;
+mod charts;
 
 use analyzers::targeting;
-use gcto_file::generate_gcto;
+use gcto_file::{generate_gcto, manual_create_gcto};
 use regex::Regex;
 use std::{
     collections::HashMap,
     env,
-    fs::File,
+    fs::{self, File},
     io::{Read, Write},
     thread,
 };
 
 const MAX_LENGTH: u32 = 9;
+const MIN_LENGTH: u32 = 6;
+const RETAINMENT_THRESHOLD: u32 = 10;
 
 fn main() {
     // Collects Arguments Passed Into Program
@@ -62,12 +65,15 @@ fn main() {
 
         gcto_file::manual_create_gcto(genome.to_string(), genome_name.to_string());
     } else if args[1] == "generate_single_frequency" {
-        let genome = &args[2];
+        let outfile = &args[2];
+        let genome = &args[3];
         let map = analyze_sequence_as_string(genome.to_string());
 
         for (key, value) in &map {
             println!("{}: {}", key, value);
         }
+
+        manual_create_gcto(genome.to_string(), outfile.to_string());
 
         let include_json_output: bool = args.contains(&"--json".to_string());
 
@@ -77,6 +83,15 @@ fn main() {
                 .unwrap()
                 .write(serde_json::to_string(&map).unwrap().as_bytes());
         }
+    } else if args[1] == "generate_chart" {
+        let genome_data = gcto_file::load_gcto_table(&args[2]);
+
+        let mut map: HashMap<String, u32> = HashMap::new();
+        genome_data.iter().for_each(|entry| {
+            map.insert(entry.0.clone(), entry.1);
+        });
+        
+        charts::generate_chart(map);
     } else {
         println!("Invalid Command");
     }
@@ -158,7 +173,7 @@ fn load_fasta_into_gcto(args: &Vec<String>) {
 fn analyze_sequence_as_string(sequence: String) -> HashMap<String, u32> {
     let mut map: HashMap<String, u32> = HashMap::new();
 
-    for i in 2..MAX_LENGTH {
+    for i in MIN_LENGTH..MAX_LENGTH {
         let mut left: usize = 0;
         let mut right: usize = i.try_into().unwrap();
 
@@ -175,7 +190,7 @@ fn analyze_sequence_as_string(sequence: String) -> HashMap<String, u32> {
         }
     }
 
-    map.retain(|_, v| *v > 1);
+    map.retain(|_, v| *v > RETAINMENT_THRESHOLD);
 
     return map;
 }
@@ -183,7 +198,7 @@ fn analyze_sequence_as_string(sequence: String) -> HashMap<String, u32> {
 fn analyze_sequence(sequence: Vec<u8>) -> HashMap<Vec<u8>, u32> {
     let mut map: HashMap<Vec<u8>, u32> = HashMap::new();
 
-    for i in 2..MAX_LENGTH {
+    for i in MIN_LENGTH..MAX_LENGTH {
         let mut left: usize = 0;
         let mut right: usize = i.try_into().unwrap();
 
@@ -198,7 +213,7 @@ fn analyze_sequence(sequence: Vec<u8>) -> HashMap<Vec<u8>, u32> {
         }
     }
 
-    map.retain(|_, v| *v > 1);
+    map.retain(|_, v| *v > RETAINMENT_THRESHOLD);
 
     return map;
 }
