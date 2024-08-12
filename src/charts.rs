@@ -1,9 +1,9 @@
 use charts::{Chart, VerticalBarView, ScaleBand, ScaleLinear};
 use std::collections::HashMap;
 
-const OUTFILE: &str = "output.svg";
+//const OUTFILE: &str = "output.svg";
 
-pub fn generate_chart(data: HashMap<String, u32>) {
+pub fn generate_chart(data: HashMap<String, u32>, OUTFILE: &str) {
     // Define chart related sizes.
     let width = data.len() as i32 as isize * 60;
     let height = 600;
@@ -51,5 +51,5 @@ pub fn generate_chart(data: HashMap<String, u32>) {
         .add_axis_left(&y)
         .add_left_axis_label("Occurrences")
         .add_bottom_axis_label("Nucleotide Sequence")
-        .save(OUTFILE).unwrap();
+        .save(OUTFILE.to_owned() + ".svg").unwrap();
 }

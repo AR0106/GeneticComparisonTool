@@ -5,7 +5,7 @@ mod gcto_file;
 mod charts;
 
 use analyzers::targeting;
-use gcto_file::{generate_gcto, manual_create_gcto};
+use gcto_file::{gcto_to_string, generate_gcto, manual_create_gcto};
 use regex::Regex;
 use std::{
     collections::HashMap,
@@ -27,7 +27,26 @@ fn main() {
     // Index 1 Contains First Past Argument (Should Be FNA File Path)
 
     if args[1] == "generate_frequency" {
-        load_fasta_into_gcto(&args);
+        if args[2] == "--fasta" {
+            load_fasta_into_gcto(&args);
+        }
+
+        let mut _genome: Vec<u8> = Vec::new();
+
+        File::open(&args[2])
+            .unwrap()
+            .read_to_end(&mut _genome)
+            .unwrap();
+
+        let genome = gcto_to_string(_genome);
+
+        let map = analyze_sequence_as_string(genome);
+
+        gcto_file::generate_gcto_frequency_map(
+                    map.clone(),
+                    args[2].to_string().replace(".gcto", "") + "_frequency",
+                    None,
+        );
     } else if args[1] == "load_frequency" {
         let table = gcto_file::load_gcto_table(&args[2]);
 
@@ -91,14 +110,14 @@ fn main() {
             map.insert(entry.0.clone(), entry.1);
         });
         
-        charts::generate_chart(map);
+        charts::generate_chart(map, args[2].replace(".gcto", "").as_str());
     } else {
         println!("Invalid Command");
     }
 }
 
 fn load_fasta_into_gcto(args: &Vec<String>) {
-    let fasta = File::open(&args[2]);
+    let fasta = File::open(&args[3]);
     let mut genomic_data = String::new();
 
     // Read File into genomic_data String
@@ -177,7 +196,7 @@ fn analyze_sequence_as_string(sequence: String) -> HashMap<String, u32> {
         let mut left: usize = 0;
         let mut right: usize = i.try_into().unwrap();
 
-        for _j in 0..sequence.len() {
+        for _ in 0..sequence.len() {
             let mut _genome = &sequence[left..right];
             //println!("{}", _genome);
             let _genome = _genome.replace('\n', "");
@@ -203,7 +222,7 @@ fn analyze_sequence(sequence: Vec<u8>) -> HashMap<Vec<u8>, u32> {
         let mut right: usize = i.try_into().unwrap();
 
         for _ in 00..sequence.len() {
-            let mut genome = &sequence[left..right];
+            let genome = &sequence[left..right];
             map.entry(genome.to_vec()).and_modify(|val| *val += 1).or_insert(1);
 
             if left < sequence.len() && right < sequence.len() {
