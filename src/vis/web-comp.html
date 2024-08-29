@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>{comp-name} Comparison</title>
+</head>
+
+<body>
+  <style>
+    h1 {
+      color: red;
+      position: sticky;
+      top: 0;
+      left: 0;
+    }
+
+    .sequence-container {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+    }
+
+    .sequence-container div {
+      padding: 0.3rem;
+      width: auto;
+      display: block;
+      font-family: monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .a {
+      background-color: yellow;
+    }
+
+    .t {
+      background-color: blue;
+    }
+
+    .c {
+      background-color: green;
+    }
+
+    .g {
+      background-color: orange;
+    }
+
+    .xn {
+      background-color: red;
+    }
+  </style>
+  <h1>{comp-name}</h1>
+  <div class="sequence-container">
+    {comp-data-1}
+  </div>
+  <div class="sequence-container">
+    {comp-data-2}
+  </div>
+</body>
+
+</html>

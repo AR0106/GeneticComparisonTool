@@ -1,8 +1,13 @@
 mod analyzers {
+    pub mod complement;
     pub mod targeting;
 }
+mod vis {
+    pub mod charts;
+    pub mod web;
+}
+
 mod gcto_file;
-mod charts;
 
 use analyzers::targeting;
 use gcto_file::{gcto_to_string, generate_gcto, manual_create_gcto};
@@ -43,9 +48,9 @@ fn main() {
         let map = analyze_sequence_as_string(genome);
 
         gcto_file::generate_gcto_frequency_map(
-                    map.clone(),
-                    args[2].to_string().replace(".gcto", "") + "_frequency",
-                    None,
+            map.clone(),
+            args[2].to_string().replace(".gcto", "") + "_frequency",
+            None,
         );
     } else if args[1] == "load_frequency" {
         let table = gcto_file::load_gcto_table(&args[2]);
@@ -109,8 +114,16 @@ fn main() {
         genome_data.iter().for_each(|entry| {
             map.insert(entry.0.clone(), entry.1);
         });
-        
-        charts::generate_chart(map, args[2].replace(".gcto", "").as_str());
+
+        vis::charts::generate_chart(map, args[2].replace(".gcto", "").as_str());
+    } else if args[1] == "compare" {
+        let testComp: vis::web::ComparisonData = vis::web::ComparisonData {
+            sequence1: "atcaatgatcaacgtaagcttctaagcatgatcaaggtgctcacacagtttatccacaacctgagtggatgacatcaagataggtcgttgtatctccttcctctcgtactctcatgaccacggaaagatgatcaagagaggatgatttcttggccatatcgcaatgaatacttgtgacttgtgcttccaattgacatcttcagcgccatattgcgctggccaaggtgacggagcgggattacgaaagcatgatcatggctgttgttctgtttatcttgttttgactgagacttgttaggatagacggtttttcatcactgactagccaaagccttactctgcctgacatcgaccgtaaattgataatgaatttacatgcttccgcgacgatttacctcttgatcatcgatccgattgaagatcttcaattgttaattctcttgcctcgactcatagccatgatgagctcttgatcatgtttccttaaccctctattttttacggaagaatgatcaagctgctgctcttgatcatcgtttc".chars().collect(),
+            sequence2: "gaaacgatgatcaagagcagcagcttgatcattcttccgtaaaaaatagagggttaaggaaacatgatcaagagctcatcatggctatgagtcgaggcaagagaattaacaattgaagatcttcaatcggatcgatgatcaagaggtaaatcgtcgcggaagcatgtaaattcattatcaatttacggtcgatgtcaggcagagtaaggctttggctagtcagtgatgaaaaaccgtctatcctaacaagtctcagtcaaaacaagataaacagaacaacagccatgatcatgctttcgtaatcccgctccgtcaccttggccagcgcaatatggcgctgaagatgtcaattggaagcacaagtcacaagtattcattgcgatatggccaagaaatcatcctctcttgatcatctttccgtggtcatgagagtacgagaggaaggagatacaacgacctatcttgatgtcatccactcaggttgtggataaactgtgtgagcaccttgatcatgcttagaagcttacgttgatcattgat".chars().collect(),
+            title: "Test Comparison".to_string(),
+        };
+
+        vis::web::generate_visual_comparison(testComp);
     } else {
         println!("Invalid Command");
     }
@@ -223,7 +236,9 @@ fn analyze_sequence(sequence: Vec<u8>) -> HashMap<Vec<u8>, u32> {
 
         for _ in 00..sequence.len() {
             let genome = &sequence[left..right];
-            map.entry(genome.to_vec()).and_modify(|val| *val += 1).or_insert(1);
+            map.entry(genome.to_vec())
+                .and_modify(|val| *val += 1)
+                .or_insert(1);
 
             if left < sequence.len() && right < sequence.len() {
                 left += 1;

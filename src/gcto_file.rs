@@ -216,7 +216,7 @@ pub fn string_to_gcto(sequence: String) -> Vec<u8> {
         output.push(PARSER_DICTIONARY[&char]);
     }
 
-    return output
+    return output;
 }
 
 pub fn gcto_to_string(sequence: Vec<u8>) -> String {
@@ -229,5 +229,5 @@ pub fn gcto_to_string(sequence: Vec<u8>) -> String {
         output.push(REV_PARSER_DICTIONARY[&byte]);
     }
 
-    return output
+    return output;
 }
