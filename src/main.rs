@@ -45,7 +45,7 @@ fn main() {
 
         let genome = gcto_to_string(_genome);
 
-        let map = analyze_sequence_as_string(genome);
+        let map = analyze_sequence(gcto_file::string_to_gcto(genome));
 
         gcto_file::generate_gcto_frequency_map(
             map.clone(),
@@ -91,11 +91,7 @@ fn main() {
     } else if args[1] == "generate_single_frequency" {
         let outfile = &args[2];
         let genome = &args[3];
-        let map = analyze_sequence_as_string(genome.to_string());
-
-        for (key, value) in &map {
-            println!("{}: {}", key, value);
-        }
+        let map = analyze_sequence(gcto_file::string_to_gcto(genome.to_string()));
 
         manual_create_gcto(genome.to_string(), outfile.to_string());
 
@@ -169,7 +165,7 @@ fn load_fasta_into_gcto(args: &Vec<String>) {
 
                 let genome = &rna_copy[chromosome].to_lowercase();
 
-                let map = analyze_sequence_as_string(genome.to_string());
+                let map = analyze_sequence(gcto_file::string_to_gcto(genome.to_string()));
 
                 gcto_file::generate_gcto_frequency_map(
                     map.clone(),
@@ -202,31 +198,6 @@ fn load_fasta_into_gcto(args: &Vec<String>) {
 // Iterate Through Each Sequence MAX_LENGTH Times and put it in a HashMap
 // @param sequence: String
 // @return HashMap<String, u32>
-fn analyze_sequence_as_string(sequence: String) -> HashMap<String, u32> {
-    let mut map: HashMap<String, u32> = HashMap::new();
-
-    for i in MIN_LENGTH..MAX_LENGTH {
-        let mut left: usize = 0;
-        let mut right: usize = i.try_into().unwrap();
-
-        for _ in 0..sequence.len() {
-            let mut _genome = &sequence[left..right];
-            //println!("{}", _genome);
-            let _genome = _genome.replace('\n', "");
-            map.entry(_genome).and_modify(|val| *val += 1).or_insert(1);
-
-            if left < sequence.len() && right < sequence.len() {
-                left += 1;
-                right += 1;
-            }
-        }
-    }
-
-    map.retain(|_, v| *v > RETAINMENT_THRESHOLD);
-
-    return map;
-}
-
 fn analyze_sequence(sequence: Vec<u8>) -> HashMap<Vec<u8>, u32> {
     let mut map: HashMap<Vec<u8>, u32> = HashMap::new();
 

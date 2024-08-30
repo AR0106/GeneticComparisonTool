@@ -1,5 +1,5 @@
 use lazy_static;
-use phf::{phf_map, PhfHash};
+use phf::phf_map;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -114,33 +114,12 @@ pub fn manual_create_gcto(data: String, outfile_name: String) {
 }
 
 pub fn generate_gcto_frequency_map(
-    data: HashMap<String, u32>,
+    data: HashMap<Vec<u8>, u32>,
     outfile_name: String,
     override_mapping: Option<bool>,
 ) {
-    let mut output_table: Vec<(Vec<u8>, u32)> = Vec::new();
-
-    for (key, value) in data {
-        if override_mapping.unwrap_or(false) {
-            let mut sequence: Vec<u8> = Vec::new();
-
-            for char in key.chars() {
-                if !PARSER_DICTIONARY.contains_key(&char) {
-                    panic!("PARSER HAS NO DEFINITION FOR {}", char)
-                }
-
-                sequence.push(PARSER_DICTIONARY[&char]);
-            }
-
-            output_table.push((sequence, value));
-        } else {
-            let sequence: Vec<u8> = key.chars().map(|n| PARSER_DICTIONARY[&n]).collect();
-            output_table.push((sequence, value));
-        }
-    }
-
     let mut outVec: Vec<u8> = Vec::new();
-    for pair in &output_table {
+    for pair in data {
         let mut newVec: Vec<u8> = pair.0.clone();
         newVec.push(PARSER_DICTIONARY[&':']);
         newVec.append(&mut u32_to_u8(pair.1));
